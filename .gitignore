@@ -1,6 +1,12 @@
+other
 dist
 cabal-dev
 *.o
 *.hi
 *.chi
 *.chs.h
+*.gif
+*.png
+*.eps
+*.ps
+Main

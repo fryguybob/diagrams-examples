@@ -1,0 +1,105 @@
+clear
+----
+xxx
+x
+----
+  x
+
+----
+.
+
+blue
+----
+xx
+x
+----
+
+x
+----
+.
+
+white
+----
+x
+ x
+----
+xx
+ x
+----
+.
+
+black
+----
+xxxx
+ x
+----
+  x
+
+----
+.
+
+orange
+----
+xxx
+ xx
+
+----
+  x
+ xx
+  x
+----
+.
+
+red
+----
+ xx
+
+----
+ xx
+  x
+xxx
+----
+.
+
+green
+----
+x  x
+xxxx
+ x
+ x
+----
+x  x
+
+
+ x
+----
+x  x
+
+
+ x
+----
+.
+
+yellow
+----
+xx
+ x
+
+----
+
+ x
+ xx
+----
+.
+
+purple
+----
+
+
+xxxx
+----
+   x
+   x
+x  x
+----
+.
