@@ -10,3 +10,4 @@ cabal-dev
 *.eps
 *.ps
 Main
+*~

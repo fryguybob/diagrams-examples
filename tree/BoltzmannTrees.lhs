@@ -1,19 +1,15 @@
 From <https://byorgey.wordpress.com/2013/04/25/random-binary-trees-with-a-size-limited-critical-boltzmann-sampler-2/>
 
 > {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-> 
+>
 > module BoltzmannTrees where
-> 
+>
 > import           Control.Applicative
-> import           Control.Arrow                  ((&&&))
 > import           Control.Lens                   ((??))
 > import           Control.Monad.Random
 > import           Control.Monad.Reader
 > import           Control.Monad.State
 > import           Control.Monad.Trans.Maybe
-> import           Data.List                      (sort)
-> import           Data.Maybe                     (fromJust)
-> import           System.Environment             (getArgs)
 
 So here’s a simple type of binary tree shapes, containing no data:
 
@@ -85,7 +81,7 @@ Here’s some code. First, a monad onion:
 
 > newtype GenM a = GenM 
 >     { unGenM :: ReaderT (Int,Int) (StateT Int (MaybeT (Rand StdGen))) a }
->   deriving (Functor, Applicative, Monad, MonadPlus, MonadRandom,
+>   deriving (Functor, Applicative, Alternative, Monad, MonadPlus, MonadRandom,
 >             MonadState Int, MonadReader (Int,Int))
 
 The ReaderT holds the min and max allowed sizes; the StateT holds the current
