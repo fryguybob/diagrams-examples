@@ -13,26 +13,28 @@ From <https://byorgey.wordpress.com/2013/04/25/random-binary-trees-with-a-size-l
 
 So here’s a simple type of binary tree shapes, containing no data:
 
-> data Tree = Leaf | Branch Tree Tree
+> data Tree a = Leaf a | Branch a (Tree a) (Tree a)
 >   deriving Show
+>
+> type Tree' = Tree ()
 
 We’ll count each constructor (Leaf or Branch) as having a size of 1:
 
-> size :: Tree -> Int
-> size Leaf = 1
-> size (Branch l r) = 1 + size l + size r
+> size :: Tree a -> Int
+> size (Leaf _) = 1
+> size (Branch _ l r) = 1 + size l + size r
 
 Now, suppose we want to randomly generate these trees. This is an entirely
 reasonable and useful thing to do: perhaps we want to, say, randomly test
 properties of functions over Tree using QuickCheck. Here’s the simplest, most
 naïve way to do it:
 
-> randomTree :: (Applicative m, MonadRandom m) => m Tree
+> randomTree :: (Applicative m, MonadRandom m) => m Tree'
 > randomTree = do
 >   r <- getRandom
 >   if r < (1/2 :: Double)
->     then return Leaf
->     else Branch <$> randomTree <*> randomTree
+>     then return $ Leaf ()
+>     else Branch <$> pure () <*> randomTree <*> randomTree
 
 We choose each of the constructors with probability 1/2, and recurse in the
 Branch case.
@@ -105,13 +107,13 @@ Here’s the code to try generating a tree: we call the atom function to record
 the increase in size, and choose between the two constructors with equal
 probability. atom, in turn, handles failing early if the size gets too big.
 
-> genTreeUB :: GenM Tree
+> genTreeUB :: GenM Tree'
 > genTreeUB = do
 >   r <- getRandom
 >   atom
 >   if r <= (1/2 :: Double)
->     then return Leaf
->     else Branch <$> genTreeUB <*> genTreeUB
+>     then return $ Leaf ()
+>     else Branch <$> pure () <*> genTreeUB <*> genTreeUB
 > 
 > atom :: GenM ()
 > atom = do
@@ -122,7 +124,7 @@ probability. atom, in turn, handles failing early if the size gets too big.
 
 genTreeLB calls genTreeUB and then performs the lower bound check on the size.
 
-> genTreeLB :: GenM Tree
+> genTreeLB :: GenM Tree'
 > genTreeLB = do
 >   put 0
 >   t <- genTreeUB
@@ -133,7 +135,7 @@ genTreeLB calls genTreeUB and then performs the lower bound check on the size.
 
 Finally, genTree just calls genTreeLB repeatedly until it succeeds.
 
-> genTree :: GenM Tree
+> genTree :: GenM Tree'
 > genTree = genTreeLB `mplus` genTree
 
 Let’s make sure it works:
