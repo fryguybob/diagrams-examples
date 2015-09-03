@@ -9,7 +9,9 @@ import           Diagrams.Prelude
 
 treeSize :: Tree a -> Int
 treeSize (Leaf _) = 0
-treeSize (Branch _ t1 t2) = 1 + treeSize t1 + treeSize t2
+treeSize (Branch _ l r) = 1 + treeSize l + treeSize r
+
+colors = brewerSet YlOrRd 9
 
 triangulation :: Tree' -> Diagram B
 triangulation t = mconcat
@@ -23,11 +25,11 @@ triangulation t = mconcat
     ps = regPoly (treeSize t + 2) 1
     -- invariant: length pts == treeSize t + 2
     triangulation' :: [P2 Double] -> Tree' -> (Diagram B, Tree (P2 Double))
-    triangulation' [p,q]   (Leaf _)   = (p ~~ q, Leaf (lerp 0.5 p q))
+    triangulation' [p,q]   (Leaf _)   = (p ~~ q # lw none, Leaf (lerp 0.5 p q))
     triangulation' pts (Branch _ l r) =
       ( mconcat
-          [ head pts ~~ mid
-          , last pts ~~ mid
+          [ head pts ~~ mid # lw none
+          , last pts ~~ mid # lw none
           , diags1
           , diags2
           ]
@@ -37,13 +39,16 @@ triangulation t = mconcat
         (pts1, mid:pts2) = splitAt (treeSize l + 1) pts
         (diags1, l') = triangulation' (pts1++[mid]) l
         (diags2, r') = triangulation' (mid:pts2) r
+    drawTree :: Tree (P2 Double) -> Diagram B
     drawTree (Leaf _) = mempty
-    drawTree (Branch p l r) = drawTree' p l <> drawTree' p r
-    drawTree' parent (Leaf p) = drawEdge parent (p .+^ (p .-. parent))
-    drawTree' parent (Branch p l r) = drawEdge parent p <> drawTree' p l <> drawTree' p r
-    drawEdge p q = circle 0.1 # fc grey # lw none # moveTo q <> (p ~~ q) # lc grey
+    drawTree (Branch p l r) = drawTree' 0 p l <> drawTree' 0 p r
+    drawTree' :: Int -> P2 Double -> Tree (P2 Double) -> Diagram B
+    drawTree' n parent (Leaf p) = drawEdge n parent (p .+^ (p .-. parent))
+    drawTree' n parent (Branch p l r) = drawEdge n parent p <> drawTree' (n+1) p l <> drawTree' (n+1) p r
+    drawEdge n p q = circle 0.1 # fc c # lw none # moveTo q <> (p ~~ q) # lc c
+      where c = colors !! (n `mod` 9)
 
 main :: IO ()
 main = do
-  Just t <- runGenM 20 0.1 genTree
+  Just t <- runGenM 200 0.1 genTree
   mainWith (triangulation t # frame 1)
