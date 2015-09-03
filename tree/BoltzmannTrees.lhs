@@ -85,7 +85,7 @@ Here’s some code. First, a monad onion:
 
 > newtype GenM a = GenM 
 >     { unGenM :: ReaderT (Int,Int) (StateT Int (MaybeT (Rand StdGen))) a }
->   deriving (Functor, Applicative, Monad, MonadPlus, MonadRandom,
+>   deriving (Functor, Applicative, Alternative, Monad, MonadPlus, MonadRandom,
 >             MonadState Int, MonadReader (Int,Int))
 
 The ReaderT holds the min and max allowed sizes; the StateT holds the current
