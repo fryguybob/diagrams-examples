@@ -26,8 +26,13 @@ import BoltzmannTrees
 
 import qualified Debug.Trace as T
 
-full 0 = Leaf
-full n = Branch (full (n-1)) (full (n-1))
+full 0 = Leaf ()
+full n = Branch () (full (n-1)) (full (n-1))
+
+labelHeight t = go t 0
+  where
+    go (Leaf _)       n = Leaf n
+    go (Branch _ l r) n = Branch n (go l (n+1)) (go r (n+1))
 
 stickZ p = origin ~~ (0 ^& 0 ^& 1)
         <> p # translate unitZ
@@ -43,8 +48,8 @@ rotX a = transform (aboutX a)
 
 onPoint n d = withName n $ \(location -> p) -> atop (d `place` p)
 
-tree3D Leaf         = mempty
-tree3D (Branch l r) = vee vl vr
+tree3D (Leaf _)       = mempty
+tree3D (Branch _ l r) = vee vl vr
   where
     vl = tree3D l # rotZ (90 @@ deg) # rotX (  tilt  @@ deg) # scale 0.9
     vr = tree3D r # rotZ (90 @@ deg) # rotX ((-tilt) @@ deg) # scale 0.9
@@ -55,8 +60,8 @@ veeWibble l r = do
     return $ stickZ l # scale lf # rotX (  branch  @@ deg)
           <> stickZ r # scale rf # rotX ((-branch) @@ deg)
 
-tree3DWibble Leaf = return mempty
-tree3DWibble (Branch l r) = do
+tree3DWibble (Leaf _)       = return mempty
+tree3DWibble (Branch _ l r) = do
     vl <- scale 0.9 . rotX (  tilt  @@ deg) . rotZ (90 @@ deg) <$> tree3DWibble l
     vr <- scale 0.9 . rotX ((-tilt) @@ deg) . rotZ (90 @@ deg) <$> tree3DWibble r
 
@@ -76,16 +81,16 @@ traceShowId a = T.trace (show a) a
 
 treeColors t = go t 0
   where
-    depth Leaf = 0
-    depth (Branch l r) = 1 + max (depth l) (depth r)
+    depth (Leaf _) = 0
+    depth (Branch _ l r) = 1 + max (depth l) (depth r)
 
     m = depth t
     cs = brewerSet RdYlGn 9
 
     color n = cs !! (floor (fromIntegral (n * 18) / fromIntegral m) `min` 8)
 
-    go Leaf _ = []
-    go (Branch l r) n = (color n : go l (n+1)) ++ (color n : go r (n+1))
+    go (Leaf _)       _ = []
+    go (Branch _ l r) n = (color n : go l (n+1)) ++ (color n : go r (n+1))
 
 withPerspective :: [Kolor] -> Path V3 Double -> Diagram B
 withPerspective cs d = mconcat . zipWith (\c -> lc c . strokeLocT) cs . concat
