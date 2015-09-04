@@ -29,7 +29,23 @@ import qualified Debug.Trace as T
 full 0 = Leaf ()
 full n = Branch () (full (n-1)) (full (n-1))
 
-labelHeight t = go t 0
+levels t = takeWhile (/= 0) $ go t
+  where
+    go (Leaf _) = 1 : repeat 0
+    go (Branch _ l r) = 1 : zipWith (+) (go l) (go r)
+
+depthByFactor t p = go ls (floor (fromIntegral s * p)) 0
+  where
+    ls = levels t
+    s = size t
+
+    go []     t n = n
+    go (a:as) t n 
+        | a < t     = go as (t-a) (n+1)
+        | otherwise = n
+
+
+labelDepth t = go t 0
   where
     go (Leaf _)       n = Leaf n
     go (Branch _ l r) n = Branch n (go l (n+1)) (go r (n+1))
@@ -67,13 +83,25 @@ tree3DWibble (Branch _ l r) = do
 
     veeWibble vl vr
 
+veeWibble' f = do
+     lf <- (+0.8) . (*0.4) <$> getRandom
+     rf <- (+0.8) . (*0.4) <$> getRandom
+     return $ stickZ mempty # scale lf # rotX (  branch  @@ deg) # f
+           <> stickZ mempty # scale rf # rotX ((-branch) @@ deg) # f
+
+tree3DWibble' f (Leaf _)       = return $ Leaf (f mempty)
+tree3DWibble' f (Branch _ l r) =
+    Branch <$> veeWibble' f
+           <*> tree3DWibble' (f . scale 0.9 . rotX (  tilt  @@ deg) . rotZ (90 @@ deg)) l
+           <*> tree3DWibble' (f . scale 0.9 . rotX ((-tilt) @@ deg) . rotZ (90 @@ deg)) r
+
 m  = lookAt (V3 8.4 6 3.2) zero unitZ
 pm = perspective (pi/3) 0.8 (-10) 10 !*! m
 
 pd = m44Deformation pm
 
--- withPerspective :: Path V3 Double -> Diagram B
--- withPerspective d = stroke $ deform pd (translateZ (-1) d)
+withPerspective' :: Path V3 Double -> Diagram B
+withPerspective' d = stroke $ deform pd (translateZ (-1) d)
 
 color n = let cs = brewerSet RdYlGn 9 in cs !! (n `mod` 9)
 
@@ -85,9 +113,10 @@ treeColors t = go t 0
     depth (Branch _ l r) = 1 + max (depth l) (depth r)
 
     m = depth t
+    m' = depthByFactor t 0.3
     cs = brewerSet RdYlGn 9
 
-    color n = cs !! (floor (fromIntegral (n * 18) / fromIntegral m) `min` 8)
+    color n = cs !! (floor (fromIntegral (n * 8) / fromIntegral m') `min` 8)
 
     go (Leaf _)       _ = []
     go (Branch _ l r) n = (color n : go l (n+1)) ++ (color n : go r (n+1))
@@ -98,9 +127,15 @@ withPerspective cs d = mconcat . zipWith (\c -> lc c . strokeLocT) cs . concat
 
 tree2D t r = tree3D t # rotZ r # withPerspective (treeColors t)
 
+tree2D' t r = tree3D t # fmap (rotZ r) # fmap withPerspective'
+
 tree2DWibble t = do
     w <- tree3DWibble t 
     return $ \r -> w # rotZ r # withPerspective (treeColors t)
+
+tree2DWibble' t = do
+    w <- tree3DWibble' id t
+    return $ \r -> w # fmap (rotZ r) # fmap withPerspective'
 
 spin f = map (,6) . allRotations $ frame
   where
