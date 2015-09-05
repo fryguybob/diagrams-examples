@@ -31,6 +31,13 @@ import BoltzmannTrees
 
 import qualified Debug.Trace as T
 
+-- Some sort of pressure must exist; the artist exists because
+-- the world is not perfect. Art would be useless if the world
+-- were perfect, as man wouldn’t look for harmony but would
+-- simply live in it. Art is born out of an ill-designed world.
+--
+--  -- Andrei Tarkovsky
+
 full 0 = Leaf ()
 full n = Branch () (full (n-1)) (full (n-1))
 
