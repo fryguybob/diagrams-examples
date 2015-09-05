@@ -39,13 +39,13 @@ lowerRegion l vs =
   fromOffsets (l *^ unit_Y : l *^ unit_X : vs)
   # glueTrail
 
-n = 200
+n = 5
 
 dia :: Tree () -> Diagram B
 dia t = mconcat
-  [ -- drawPath vs
---  , grid n
-   upperRegion n vs # strokeT # fc yellow # alignBL
+  [ drawPath vs
+  , grid n
+  , upperRegion n vs # strokeT # fc yellow # alignBL
   , lowerRegion n vs # strokeT # fc skyblue # alignBL
   ]
   where
@@ -53,5 +53,5 @@ dia t = mconcat
 
 main :: IO ()
 main = do
-  Just t <- runGenM (2*n + 1) 0.001 genTree
+  Just t <- runGenM (2*n + 1) 0 genTree
   mainWith (dia t # frame 1)
