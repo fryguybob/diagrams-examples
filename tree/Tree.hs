@@ -21,6 +21,8 @@ import Diagrams.ThreeD.Transform  (translateZ)
 import Diagrams.ThreeD.Projection
 import Diagrams.LinearMap         (amap)
 
+import Codec.Picture              (GifDelay)
+
 import Linear.Matrix              ((!*!))
 
 import Frames
@@ -186,7 +188,7 @@ tree2DWibble t = do
     return $ \r -> w # rotZ r # withPerspective (treeColors t)
 
 frameCount = 100
-delay = 6
+delay = 6 :: GifDelay
 
 spin f = map (,delay) . allRotations $ frame
   where
@@ -232,8 +234,22 @@ mainRandWibble = do
 
 --    mainWith (w (0 @@ turn))
 
+mainRandWibbleSeed = mainWith $ \seed -> do
+    let Just t = seedGenM seed 1000 0.15 genTree
+    w <- to2D <$> tree3DWibble' t
+--    return (spin w)
+    return (w (0 @@ turn) # bgFrame 0.05 skyblue)
+
 mainFrames = mainWith (map fst $ spin (tree2D t))
   where
     t = full 10
 
-main = mainRandWibble
+main = mainRandWibbleSeed
+
+
+-- | A list of named diagrams can give the multi-diagram interface.
+instance ToResult [(QDiagram Rasterific V2 n Any, GifDelay)] where
+  type Args [(QDiagram Rasterific V2 n Any, GifDelay)] = ()
+  type ResultOf [(QDiagram Rasterific V2 n Any, GifDelay)] = [(QDiagram Rasterific V2 n Any, GifDelay)]
+
+  toResult ds _ = ds

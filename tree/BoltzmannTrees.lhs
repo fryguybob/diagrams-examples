@@ -96,15 +96,23 @@ numbers. To run a computation in this monad we take a target size and a
 tolerance and use them to compute minimum and maximum sizes. (The (??) in the
 code below is an infix version of flip, defined in the lens package.)
 
-> runGenM :: Int -> Double -> GenM a -> IO (Maybe a)
-> runGenM targetSize eps m = do
+> runGenM' :: StdGen -> Int -> Double -> GenM a -> Maybe a
+> runGenM' g targetSize eps m =
 >   let wiggle  = floor $ fromIntegral targetSize * eps
 >       minSize = targetSize - wiggle
 >       maxSize = targetSize + wiggle
+>   in
+>       (evalRand ?? g) . runMaybeT . (evalStateT ?? 0)
+>       . (runReaderT ?? (minSize, maxSize)) . unGenM
+>       $ m
+>
+> runGenM :: Int -> Double -> GenM a -> IO (Maybe a)
+> runGenM targetSize eps m = do
 >   g <- newStdGen
->   return . (evalRand ?? g) . runMaybeT . (evalStateT ?? 0)
->          . (runReaderT ?? (minSize, maxSize)) . unGenM
->          $ m
+>   return $ runGenM' g targetSize eps m
+>
+> seedGenM :: Int -> Int -> Double -> GenM a -> Maybe a
+> seedGenM = runGenM' . mkStdGen
 
 Here’s the code to try generating a tree: we call the atom function to record
 the increase in size, and choose between the two constructors with equal
