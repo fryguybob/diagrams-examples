@@ -19,6 +19,7 @@ import Diagrams.Backend.Rasterific.CmdLine
 import Diagrams.Backend.CmdLine
 import Diagrams.ThreeD.Transform  (translateZ)
 import Diagrams.ThreeD.Projection
+import Diagrams.TwoD.Offset
 import Diagrams.LinearMap         (amap)
 
 import Codec.Picture              (GifDelay)
@@ -110,11 +111,17 @@ tree3DWibble' f (Branch _ l r) = do
            <*> tree3DWibble' (f . translate or . scale 0.9 . rotX ((-tilt) @@ deg) . rotZ (90 @@ deg)) r
 -}
 
+randWibble = do
+    [xa,ya,za,xb,yb,zb] <- replicateM 6 $ (\r -> r*0.8 - 0.4) <$> getRandom
+    return $ fromSegments [bezier3 (xa ^& ya ^& (za/2+0.3)) (xb ^& yb ^& (1-zb/2-0.3)) unitZ]
+
 veeWibble' o f = do
     lf <- (+0.8) . (*0.4) <$> getRandom
     rf <- (+0.8) . (*0.4) <$> getRandom
-    let vl = (origin ~~ (origin .+^ unitZ)) # scale lf # rotX (  branch  @@ deg) # f
-        vr = (origin ~~ (origin .+^ unitZ)) # scale rf # rotX ((-branch) @@ deg) # f 
+    wl <- randWibble
+    wr <- randWibble
+    let vl = wl # scale lf # rotX (  branch  @@ deg) # f
+        vr = wr # scale rf # rotX ((-branch) @@ deg) # f 
     return ( trailLike (vl `at` o)
           <> trailLike (vr `at` o)
            , o .+^ trailOffset vl
@@ -138,8 +145,8 @@ pm = perspective (pi/3) 0.8 (-10) 10 !*! m
 
 pd = m44Deformation pm
 
-withPerspective' :: Path V3 Double -> Diagram B
-withPerspective' d = stroke $ deform pd (translateZ (-1) d)
+withPerspective' :: Path V3 Double -> Path V2 Double
+withPerspective' d = deform pd (translateZ (-1) d)
 
 color n = let cs = brewerSet RdYlGn 9 in cs !! (n `mod` 9)
 
@@ -164,8 +171,6 @@ getCenter = boxCenter . boundingBox
 
 tree2D t r = tree3D t # rotZ r # withPerspective (treeColors t)
 
-tree2D' t r = tree3D t # fmap (rotZ r) # fmap withPerspective'
-
 colorByDepth t = go t 0
   where
     m = depth t
@@ -178,7 +183,17 @@ colorByDepth t = go t 0
     go (Branch x l r ) d = Branch (color d, x) (go l (d+1)) (go r (d+1))
 
 
-spinAndProject t = \r -> fmap ((\x -> (getCenter x, withPerspective' x)) . rotZ r) t
+spinAndProject t = \r -> fmap ((\x -> (getCenter x, boom $ withPerspective' x)) . rotZ r) t
+
+boom :: Path V2 Double -> Diagram B
+boom (pathTrails -> []) = mempty
+boom (pathTrails -> (t:ts)) = stroke t' <> boom (toPath ts)
+ where
+   o = loc t 
+   v = trailOffset . unLoc $ t
+   l = norm v
+   t' | l < 0.02   = fromOffsets [v] `at` o
+      | otherwise = t
 
 to2D = fmap (mconcat . sortZ . F.toList . colorByDepth) . spinAndProject
     where
@@ -244,8 +259,8 @@ mainRandWibble = do
 mainRandWibbleSeed = mainWith $ \seed -> do
     let Just t = seedGenM seed 1000 0.15 genTree
     w <- to2D <$> tree3DWibble' t
---    return (spin w)
-    return (w (0 @@ turn) # bgFrame 0.05 skyblue)
+    return (spin w)
+--    return (w (0 @@ turn) # bgFrame 0.05 skyblue)
 
 mainFrames = mainWith (map fst $ spin (tree2D t))
   where
