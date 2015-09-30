@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts          #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TupleSections             #-}
+{-# LANGUAGE DeriveFunctor             #-}
 {-# LANGUAGE ViewPatterns              #-}
 {-# LANGUAGE BangPatterns              #-}
 {-# LANGUAGE LambdaCase                #-}
@@ -34,6 +35,32 @@ import Linear.Matrix              ((!*!))
 
 import Pieces
 import Solve
+
+-----------------------------------------------
+
+data Wrap a b = Wrap { _wrapData :: a, _unwrap :: b }
+  deriving (Functor, Show, Eq)
+
+instance Transformable b => Transformable (Wrap a b) where
+    transform t = fmap (transform t)
+
+instance HasOrigin b => HasOrigin (Wrap a b) where
+    moveOriginTo p = fmap (moveOriginTo p)
+
+type instance V (Wrap a b) = V b
+type instance N (Wrap a b) = N b
+
+instance Enveloped b => Enveloped (Wrap a b) where
+    getEnvelope = getEnvelope . _unwrap
+
+instance Alignable b => Alignable (Wrap a b) where
+    defaultBoundary v = defaultBoundary v . _unwrap
+
+-- Data.Distribute.distribute only works on fixed size containers?
+expand :: Wrap a [b] -> [Wrap a b]
+expand w = map (\b -> const b <$> w) . _unwrap $ w
+
+-----------------------------------------------
 
 rotZ a = transform (aboutZ a)
 rotX a = transform (aboutX a)
@@ -87,7 +114,18 @@ testFace rev = toPath . (if rev then reverseTrail else id) . glueTrail . fromOff
 spinAndProject t = \r -> lineJoin LineJoinRound . mconcat . map snd . filter fst 
                        . colors _2 . map (fmap stroke) . markFaces . pathTrails 
                        . withPerspective . toPath . sortZ . pathTrails . rotZ r 
-                       $ centerXYZ $ mconcat $ map snd t
+                       . centerXYZ . mconcat . map snd $ t
+
+projectFaces = map (fmap stroke) . markFaces . pathTrails . withPerspective . toPath
+
+-- applyColor :: Bool -> Wrap (Colour Double) [(Bool,Diagram B)] -> Diagram B
+applyColor True  (Wrap c ds) = F.foldMap snd . map (_2 %~ lw none . opacity 0.5 . fc c) $ ds
+applyColor False (Wrap c ds) =
+      lineJoin LineJoinRound . F.foldMap snd . filter fst . map (_2 %~ fc c) $ ds
+
+spinAndProjectWrap t = \r -> F.foldMap (applyColor False . fmap projectFaces)
+                           . sortZ . concatMap (expand . fmap pathTrails)
+                           . rotZ r . centerXYZ . map (uncurry Wrap) $ t
 
 
 -- Rubic'sish   colors l ts = zipWith (\c t -> t & l %~ (fc c)) (cycle [red,green,blue,yellow,orange]) ts
@@ -113,7 +151,12 @@ mainWithSpace :: Space (Maybe (Colour Double)) -> IO ()
 mainWithSpace s = do
     -- let d = spinAndProject (build3D s)
     -- gifMain (spin d)
-    
+    --
+    let d = spinAndProjectWrap (build3D s)
+    gifMain (spin d)
+
+mainWithSpace2D :: Space (Maybe (Colour Double)) -> IO ()
+mainWithSpace2D s = do
     let ds = [ [ square 1 # fc c # translate (fmap fromIntegral (V2 x y)) 
                | x <- [0..3], y <- [0..3], Just c <- [s ! V3 x y z]
                ] # mconcat
@@ -143,6 +186,7 @@ main = do
 --    mainWithSolve (take 2 ps) (V3 4 4 4)
     mainWithSolve ps (pure 4)
 -------------------------------------
+
 
 box :: Path V3 Double
 box = toPath $ map (\i -> face # rotZ (fromIntegral i * 360 / 4 @@ deg)) [0..3]
