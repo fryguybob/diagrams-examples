@@ -3,6 +3,8 @@ module Pieces
     ( piece
     , pieces
     , parsePiecesFromFile
+
+    , Piece
     ) where
 
 import Control.Applicative hiding ((<|>), many)
